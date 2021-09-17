@@ -11,7 +11,7 @@ use types::{
     account::AccountHash,
     bytesrepr::{FromBytes, ToBytes},
     contracts::{EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Parameter},
-    ApiError, CLType, CLTyped, Key, URef,system::CallStackElement
+    ApiError, CLType, CLTyped, Key, URef,system::CallStackElement, CLValue
 };
 
 #[repr(u16)]
@@ -29,7 +29,21 @@ impl From<Error> for ApiError {
 const OWNER_KEY: &str = "OWNER_KEY";
 const PENDING_OWNER_KEY: &str = "PENDING_OWNER_KEY";
 
-//
+/* ✖✖✖✖✖✖✖✖✖✖✖ Public getters - Start ✖✖✖✖✖✖✖✖✖✖✖ */
+#[no_mangle]
+pub extern "C" fn owner() {
+    let val: AccountHash = get_key(&OWNER_KEY);
+    ret(val)
+}
+
+#[no_mangle]
+pub extern "C" fn pending_owner() {
+    let val: AccountHash = get_key(&PENDING_OWNER_KEY);
+    ret(val)
+}
+/* ✖✖✖✖✖✖✖✖✖✖✖ Public getters - End ✖✖✖✖✖✖✖✖✖✖✖ */
+
+/* ✖✖✖✖✖✖✖✖✖✖✖ Public functions - Start ✖✖✖✖✖✖✖✖✖✖✖ */
 #[no_mangle]
 pub extern "C" fn transfer_ownership() {
     _only_owner();
@@ -46,6 +60,7 @@ pub extern "C" fn claim_ownership() {
 
     _claim_ownership()
 }
+/* ✖✖✖✖✖✖✖✖✖✖✖ Public functions - End ✖✖✖✖✖✖✖✖✖✖✖ */
 
 // All session code must have a `call` entrypoint.
 #[no_mangle]
@@ -60,6 +75,7 @@ pub extern "C" fn call() {
     set_key(OWNER_KEY, owner);
 }
 
+/* ✖✖✖✖✖✖✖✖✖✖✖ Internal Functions - Start ✖✖✖✖✖✖✖✖✖✖✖ */
 fn _transfer_ownership(new_owner: AccountHash, direct: bool, renounce: bool) {
     if direct {
         if new_owner != AccountHash::default() || renounce {
@@ -94,6 +110,11 @@ fn _only_pending_owner() {
     ) {
         runtime::revert(Error::BoringOwnableForbidden);
     }
+}
+/* ✖✖✖✖✖✖✖✖✖✖✖ Internal Functions - End ✖✖✖✖✖✖✖✖✖✖✖ */
+
+fn ret<T: CLTyped + ToBytes>(value: T) {
+    runtime::ret(CLValue::from_t(value).unwrap_or_revert())
 }
 
 fn get_key<T: FromBytes + CLTyped + Default>(name: &str) -> T {
